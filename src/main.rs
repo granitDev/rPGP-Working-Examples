@@ -14,13 +14,14 @@ const MSG_FILE_NAME: &'static str = "encrypted_message.txt";
 const SECRET_MSG: &'static str = "This is the secret message!";
 
 fn main() -> Result<()> {
+    println!(" Original Message: {}", &SECRET_MSG);
+
     _ = encrypt_message(SECRET_MSG, PUBLIC_KEY_FILE).context("encrypting message")?;
 
     let encrypted_msg =
         fs::read_to_string(MSG_FILE_NAME).context("Reading encrypted message from file")?;
     let decrypted_msg = decrypt_message(&encrypted_msg.as_str(), SECRET_KEY_FILE)?;
 
-    println!(" Original Message: {}", &SECRET_MSG);
     println!("Decrypted Message: {}", &decrypted_msg);
 
     Ok(())
