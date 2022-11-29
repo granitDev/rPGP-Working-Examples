@@ -1,74 +1,53 @@
 #![allow(non_snake_case)]
 use anyhow::{Context, Result};
 use pgp::{
-    armor, composed::message::Message, composed::signed_key::*, crypto::sym::SymmetricKeyAlgorithm,
+    composed::message::Message, composed::signed_key::*, crypto::sym::SymmetricKeyAlgorithm,
     Deserializable,
 };
 use rand::prelude::*;
 use std::{fs, io::Cursor};
 
 // While the keys used in this example are unique for each "person", the key password is the same for both
-const PASSWORD: &str = "qwerty";
+const PUBLIC_KEY_FILE: &'static str = "./key_files/pub.asc";
+const SECRET_KEY_FILE: &'static str = "./key_files/sec.asc";
+const MSG_FILE_NAME: &'static str = "encrypted_message.txt";
+const SECRET_MSG: &'static str = "This is the secret message!";
 
 fn main() -> Result<()> {
-    println!("Hello, rPGP!");
-    ptwd(); // Prints the working directory
+    _ = encrypt_message(SECRET_MSG, PUBLIC_KEY_FILE).context("encrypting message")?;
 
-    let p1_original_msg = "This is a secret message!";
-    let p1_message_file = person1_encrypt_msg_for_person1(p1_original_msg)?;
-    println!("File path: {}", p1_message_file);
-    let p1_armored_msg = fs::read_to_string(p1_message_file)?;
-    println!("Armored Msg: {}", p1_armored_msg);
+    let encrypted_msg =
+        fs::read_to_string(MSG_FILE_NAME).context("Reading encrypted message from file")?;
+    let decrypted_msg = decrypt_message(&encrypted_msg.as_str(), SECRET_KEY_FILE)?;
 
-    let decoded_msg = person2_decrypt_msg_from_person1(&p1_armored_msg.as_str())?;
+    println!(" Original Message: {}", &SECRET_MSG);
+    println!("Decrypted Message: {}", &decrypted_msg);
 
-    println!("Original: {}", &p1_original_msg);
-    println!("Decoded: {}", &decoded_msg);
-    // assert_eq!(&p1_original_msg, &decoded_msg);
-
-    // let pubkey = fs::read_to_string("./key_files/public.key")
-    //     .context("Trying to load public key from file")?;
-    // let server_pubkey = SignedPublicKey::from_string(pubkey.as_str())?;
-
-    // let msg = "This is a secret!";
-    // let msg = Message::new_literal("./key_files/message.txt", msg);
-    // println!("{:?}", &msg);
-
-    // let mut rng = StdRng::from_entropy();
-    // msg.encrypt_to_keys(&mut rng, SymmetricKeyAlgorithm::AES128, &[&server_pubkey.0])?;
-    // let armored = msg.to_armored_string(None).unwrap();
-    // _ = fs::write("em.txt", armored)?;
-    // println!("{}", armored);
-
-    // let _auth_req = requests::AuthRequest::from_auth_cmd(&auth);
     Ok(())
 }
 
-fn person1_encrypt_msg_for_person1(msg: &str) -> Result<String> {
-    let pubkey = fs::read_to_string("./key_files/person_two/pub.asc")
+fn encrypt_message(msg: &str, pubkey_file: &str) -> Result<String> {
+    let pubkey = fs::read_to_string(pubkey_file)
         .context("Trying to load public key for Person Two from file")?;
     let (pubkey, _) = SignedPublicKey::from_string(pubkey.as_str())?;
 
     // Requires a file name as the first arg, in this case I pass "none", as it's not used typically, it's just meta data
     let msg = Message::new_literal("none", msg);
-    // println!("{:?}", &msg);
 
     let armored = generate_armored_string(msg, pubkey)?;
-    let message_file = "p1_armored_message.txt";
-    _ = fs::write(&message_file, armored)?;
+    _ = fs::write(&MSG_FILE_NAME, &armored).context("Writing encrypted message to file")?;
 
-    Ok(message_file.to_string())
+    Ok(armored)
 }
 
 fn generate_armored_string(msg: Message, pk: SignedPublicKey) -> Result<String> {
     let mut rng = StdRng::from_entropy();
-    msg.encrypt_to_keys(&mut rng, SymmetricKeyAlgorithm::AES128, &[&pk])?;
-    Ok(msg.to_armored_string(None)?)
+    let new_msg = msg.encrypt_to_keys(&mut rng, SymmetricKeyAlgorithm::AES128, &[&pk])?;
+    Ok(new_msg.to_armored_string(None)?)
 }
 
-fn person2_decrypt_msg_from_person1(armored: &str) -> Result<String> {
-    println!("Decrypting: {}", armored);
-    let seckey = fs::read_to_string("./key_files/person_two/sec.asc")?;
+fn decrypt_message(armored: &str, seckey_file: &str) -> Result<String> {
+    let seckey = fs::read_to_string(seckey_file)?;
     let (seckey, _) = SignedSecretKey::from_string(seckey.as_str())?;
 
     let buf = Cursor::new(armored);
@@ -86,15 +65,4 @@ fn person2_decrypt_msg_from_person1(armored: &str) -> Result<String> {
     }
 
     Err(anyhow::Error::msg("Failed to find message"))
-}
-
-// Print the working directory
-fn ptwd() {
-    let pwd = std::env::current_dir()
-        .unwrap()
-        .as_os_str()
-        .to_str()
-        .unwrap()
-        .to_string();
-    println!("Working dir: {}", pwd);
 }
