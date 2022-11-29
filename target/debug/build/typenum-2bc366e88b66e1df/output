@@ -1,0 +1,2 @@
+cargo:rustc-env=TYPENUM_BUILD_CONSTS=/home/brandon/Development/INR_DEV/platform/DRIVE_Sync/src/app/examples/rust/pgp_example/target/debug/build/typenum-2bc366e88b66e1df/out/consts.rs
+cargo:rustc-env=TYPENUM_BUILD_OP=/home/brandon/Development/INR_DEV/platform/DRIVE_Sync/src/app/examples/rust/pgp_example/target/debug/build/typenum-2bc366e88b66e1df/out/op.rs
