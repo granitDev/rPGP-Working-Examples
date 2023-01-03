@@ -1,15 +1,19 @@
-# rPGP-Working-Example
-A working, non-contrived example of the Rust rPGP library to help others attempting to use this library
+# rPGP Working Examples
 
-Please see the [rPGP](https://github.com/rpgp/rpgp) repo and the [crate documentation](https://docs.rs/pgp/0.9.0/pgp/) for more specifc information on Friedel Ziegelmayer's work.
+A list of non-contrived working examples of the Rust rPGP library to help others attempting to use this library.
 
-When run, the program will:
-- Encrypt a string, and save the encrypted string to a file.
-- Read in that file, and decrypt the messge it contains.
-- Print both strings for the user to verify that they match.
+Please see the [rPGP](https://github.com/rpgp/rpgp) repo and the [crate documentation](https://docs.rs/pgp/0.9.0/pgp/) for more specific information on Friedel Ziegelmayer's work.
 
-There are two companion python scripts to prove that this example will work with unrealted PGP libraries.
+Each example will typically include:
+ - A README.md file with a description of the example
+ - A secret message to be encrypted. This might be hard coded or read from a file, or passed in as a command line argument.
+ - An encryption process, and a decryption process.
+ - Some trivial output to show that the encryption and decryption worked.
 
-Running the `pgp_decrypter.py` will decrypt and print the message contained in the "encrypted_message.txt" file created by the "pgp_example" program.
+By non-contrived, I mean that the examples will not take shortcuts that preclude them from being applicable to actual use.
 
-Running the `pgp_encrypter.py` will create an "encrypted_message.txt" file. Commenting out the line in `main.rs` that calls the `encrypt_message()` with the python generated "encrypted_message.txt" and then running the program will decrypt and print out the message from the script, which you will be able to see, is different from the Rust message.
+I found this to be a pain point in the existing examples and tests included with the library, so I wanted to provide some examples that are more applicable to real world use cases.
+
+Each example presented is from a real world use case that is paired down to the bare minimum to demonstrate the use of the library.
+
+This may make it appear to be doing things that are unnecessary in the context of the example, but it is done to demonstrate the practical uses of the library.
