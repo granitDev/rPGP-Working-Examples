@@ -523,6 +523,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "keys_from_file"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "pgp",
+ "rand 0.8.5",
+]
+
+[[package]]
 name = "lazy_static"
 version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -719,15 +728,6 @@ dependencies = [
  "twofish",
  "x25519-dalek",
  "zeroize",
-]
-
-[[package]]
-name = "pgp_example"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "pgp",
- "rand 0.8.5",
 ]
 
 [[package]]
