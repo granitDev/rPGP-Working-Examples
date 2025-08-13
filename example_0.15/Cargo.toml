@@ -1,0 +1,13 @@
+[package]
+name = "create_keys_and_use"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+os_path = "0.8.0"
+pgp = "0.15"
+rand = "0.8"
+smallvec = "1.15"
+thiserror = "2.0"

@@ -8,7 +8,7 @@ fn main() {
     println!("Example: Create Keys and Use Them");
 
     println!("Creating key pair, this will take a few seconds...");
-    let key_pair = generate_key_pair().expect("Failed to generate key pair");
+    let key_pair = generate_key_pair("foo bar baz").expect("Failed to generate key pair");
 
     let msg = "This is a secret message";
     println!("Secret message: {}", msg);
@@ -30,13 +30,13 @@ pub struct KeyPair {
     pub public_key: pgp::SignedPublicKey,
 }
 
-pub fn generate_key_pair() -> Result<KeyPair, anyhow::Error> {
+pub fn generate_key_pair(user_id: &str) -> Result<KeyPair, anyhow::Error> {
     let mut key_params = composed::key::SecretKeyParamsBuilder::default();
     key_params
         .key_type(composed::KeyType::Rsa(2048))
         .can_create_certificates(false)
         .can_sign(true)
-        .primary_user_id("Server <admin@globusmedical.com>".into())
+        .primary_user_id(user_id.into())
         .preferred_symmetric_algorithms(smallvec![crypto::sym::SymmetricKeyAlgorithm::AES256]);
 
     let secret_key_params = key_params
