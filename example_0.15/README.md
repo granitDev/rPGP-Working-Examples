@@ -1,10 +1,9 @@
 # Create and Use PGP Keys
 
-This example shows how to create and use PGP keys to encrypt and decrypt messages.
+This example library that can be used to create and manage PGP keys for encrypting and decrypting messages.
 
-When run, the program will:
-- Create a new PGP key pair and keep them in memory
-- Pass the public key to the `encrypt_message()` function, returning an encrypted string
-- Use the private key to decrypt the message and print it out
-
-The keys are converted to ASCII armored format, this is not strictly necessary for the encryption and decryption to work, but it is useful for many applications.
+It has four main components:
+1. Key Generation: Functions to create new PGP key pairs.
+2. Encryption: Functions to encrypt messages using a public key.
+3. Decryption: Functions to decrypt messages using a private key.
+4. Validation: Functions to check the validity of PGP keys and signatures.
