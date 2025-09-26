@@ -306,6 +306,7 @@ dependencies = [
  "os_path",
  "pgp",
  "rand",
+ "sha2",
  "smallvec",
  "thiserror",
 ]
