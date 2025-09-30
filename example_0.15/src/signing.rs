@@ -81,7 +81,7 @@ pub fn sign_message(key_pair: &KeyPair, message: &str) -> Result<String, Signing
 /// * `Ok((String, bool))` - Tuple of (extracted_message, is_signature_valid)
 /// * `Err(SigningError)` - Error during verification
 pub fn verify_signed_message(
-    key_pair: &KeyPair,
+    public_key: &pgp::SignedPublicKey,
     signed_message_armored: &str,
 ) -> Result<(String, bool), SigningError> {
     // Parse the armored signed message
@@ -90,7 +90,7 @@ pub fn verify_signed_message(
         .0;
 
     // First try to verify, following the pattern from decrypt.rs where verify returns a result
-    let is_valid = match msg.verify(key_pair.public_key()) {
+    let is_valid = match msg.verify(public_key) {
         Ok(_) => true,
         Err(_) => false,
     };
@@ -193,21 +193,21 @@ pub fn sign_data_from_reader<R: Read>(
 /// * `Ok(bool)` - True if signature is valid, false otherwise
 /// * `Err(SigningError)` - Error during verification
 pub fn verify_signed_data(
-    key_pair: &KeyPair,
+    public_key: &pgp::SignedPublicKey,
     data: &[u8],
     signature_armored: &str,
 ) -> Result<bool, SigningError> {
     // For large data, use streaming verification
     if data.len() > 1024 * 1024 {
-        verify_signed_data_from_reader(key_pair, &mut Cursor::new(data), signature_armored)
+        verify_signed_data_from_reader(public_key, &mut Cursor::new(data), signature_armored)
     } else {
-        verify_signed_data_original(key_pair, data, signature_armored)
+        verify_signed_data_original(public_key, data, signature_armored)
     }
 }
 
 /// Original verification method for compatibility
 fn verify_signed_data_original(
-    key_pair: &KeyPair,
+    public_key: &pgp::SignedPublicKey,
     data: &[u8],
     signature_armored: &str,
 ) -> Result<bool, SigningError> {
@@ -218,7 +218,7 @@ fn verify_signed_data_original(
             .0;
 
     // Verify the detached signature against the data
-    match signature.verify(key_pair.public_key(), data) {
+    match signature.verify(public_key, data) {
         Ok(_) => Ok(true),
         Err(_) => Ok(false),
     }
@@ -235,7 +235,7 @@ fn verify_signed_data_original(
 /// * `Ok(bool)` - True if signature is valid, false otherwise
 /// * `Err(SigningError)` - Error during verification
 pub fn verify_signed_data_from_reader<R: Read>(
-    key_pair: &KeyPair,
+    public_key: &pgp::SignedPublicKey,
     reader: &mut R,
     signature_armored: &str,
 ) -> Result<bool, SigningError> {
@@ -245,7 +245,7 @@ pub fn verify_signed_data_from_reader<R: Read>(
         .read_to_end(&mut data)
         .map_err(|e| SigningError::VerificationFailed(format!("Failed to read data: {}", e)))?;
 
-    verify_signed_data_original(key_pair, &data, signature_armored)
+    verify_signed_data_original(public_key, &data, signature_armored)
 }
 
 /// Verify a detached signature against a file
@@ -259,7 +259,7 @@ pub fn verify_signed_data_from_reader<R: Read>(
 /// * `Ok(bool)` - True if signature is valid, false otherwise
 /// * `Err(SigningError)` - Error during verification
 pub fn verify_file_signature<P: AsRef<Path>>(
-    key_pair: &KeyPair,
+    public_key: &pgp::SignedPublicKey,
     file_path: P,
     signature_armored: &str,
 ) -> Result<bool, SigningError> {
@@ -282,7 +282,7 @@ pub fn verify_file_signature<P: AsRef<Path>>(
     let data = std::fs::read(file_path.as_ref())
         .map_err(|e| SigningError::VerificationFailed(format!("Failed to read file: {}", e)))?;
 
-    verify_signed_data(key_pair, &data, signature_armored)
+    verify_signed_data(public_key, &data, signature_armored)
 }
 
 #[cfg(test)]
@@ -300,7 +300,7 @@ mod tests {
 
         // Verify the signed message
         let (extracted_message, is_valid) =
-            verify_signed_message(&key_pair, &signed_message).unwrap();
+            verify_signed_message(&key_pair.public_key(), &signed_message).unwrap();
         assert!(is_valid);
         assert_eq!(extracted_message, test_message);
     }
@@ -315,7 +315,7 @@ mod tests {
         assert!(!signature.is_empty());
 
         // Verify the signature against the original data
-        let is_valid = verify_signed_data(&key_pair, test_data, &signature).unwrap();
+        let is_valid = verify_signed_data(&key_pair.public_key(), test_data, &signature).unwrap();
         assert!(is_valid);
     }
 
@@ -331,7 +331,7 @@ mod tests {
         assert!(!signature.is_empty());
 
         // Verify the signature against the original data
-        let is_valid = verify_signed_data(&key_pair, &large_data, &signature).unwrap();
+        let is_valid = verify_signed_data(&key_pair.public_key(), &large_data, &signature).unwrap();
         assert!(is_valid);
     }
 
@@ -345,9 +345,12 @@ mod tests {
         assert!(!signature.is_empty());
 
         // Verify from reader
-        let is_valid =
-            verify_signed_data_from_reader(&key_pair, &mut Cursor::new(test_data), &signature)
-                .unwrap();
+        let is_valid = verify_signed_data_from_reader(
+            &key_pair.public_key(),
+            &mut Cursor::new(test_data),
+            &signature,
+        )
+        .unwrap();
         assert!(is_valid);
     }
 
@@ -371,7 +374,8 @@ mod tests {
         assert!(!signature.is_empty());
 
         // Verify the file signature
-        let is_valid = verify_file_signature(&key_pair, test_file_path, &signature).unwrap();
+        let is_valid =
+            verify_file_signature(&key_pair.public_key(), test_file_path, &signature).unwrap();
         assert!(is_valid);
 
         // Clean up
@@ -389,7 +393,7 @@ mod tests {
 
         // Try to verify with key_pair2 (should fail)
         let (extracted_message, is_valid) =
-            verify_signed_message(&key_pair2, &signed_message).unwrap();
+            verify_signed_message(&key_pair2.public_key(), &signed_message).unwrap();
         assert!(!is_valid);
         assert_eq!(extracted_message, test_message); // Content should still be extractable
     }
@@ -404,7 +408,7 @@ mod tests {
         let signature = sign_data(&key_pair1, test_data).unwrap();
 
         // Try to verify with key_pair2 (should fail)
-        let is_valid = verify_signed_data(&key_pair2, test_data, &signature).unwrap();
+        let is_valid = verify_signed_data(&key_pair2.public_key(), test_data, &signature).unwrap();
         assert!(!is_valid);
     }
 
@@ -415,7 +419,7 @@ mod tests {
         let invalid_signature = "invalid signature format";
 
         // Verification should return an error for invalid signature format
-        let result = verify_signed_data(&key_pair, test_data, invalid_signature);
+        let result = verify_signed_data(&key_pair.public_key(), test_data, invalid_signature);
         assert!(result.is_err());
         match result.unwrap_err() {
             SigningError::InvalidSignatureFormat(_) => (),
